@@ -35,4 +35,9 @@ def report(results):
             print(f"  {key:9} {g:12} {sum(v)}/{len(v)}")
 
 if __name__ == "__main__":
-    run()
+    import sys
+    if "--guarded" in sys.argv:
+        from agentguard.firewall.guarded_agent import run_guarded_agent
+        run(run_guarded_agent, "data/redteam_guarded.jsonl")
+    else:
+        run()

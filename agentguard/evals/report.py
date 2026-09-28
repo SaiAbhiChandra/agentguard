@@ -1,15 +1,15 @@
-import json, time
+import json, time, sys
 from pathlib import Path
 from agentguard.evals.judge import evaluate
 
-def main(delay: float = 2.0):
-    items = [json.loads(l) for l in Path("data/results.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+def main(src="data/results.jsonl", dst="data/scores.json", delay=2.0):
+    items = [json.loads(l) for l in Path(src).read_text(encoding="utf-8").splitlines() if l.strip()]
     scored = []
     for it in items:
         scored.append(evaluate(it))
         print(it["id"], "->", "PASS" if scored[-1]["task_success"] else "FAIL")
         time.sleep(delay)
-    Path("data/scores.json").write_text(json.dumps(scored, indent=2, ensure_ascii=False), encoding="utf-8")
+    Path(dst).write_text(json.dumps(scored, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print("\n=== AgentGuard report ===")
     for cat in ("normal", "edge", "adversarial"):
@@ -25,4 +25,7 @@ def main(delay: float = 2.0):
     print(f"{'overall':12} success {total}/{len(scored)} ({100*total//len(scored)}%)")
 
 if __name__ == "__main__":
-    main()
+    if "--guarded" in sys.argv:
+        main("data/results_guarded.jsonl", "data/scores_guarded.json")
+    else:
+        main()
