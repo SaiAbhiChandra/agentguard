@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.env
+.venv/
+data/traces.jsonl
+data/results.jsonl
