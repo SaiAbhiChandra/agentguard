@@ -3,12 +3,18 @@ from agentguard.tracing.tracer import trace
 from agentguard.target_agent.agent import call_llm, get_order_status, SYSTEM_PROMPT, FALLBACK
 from agentguard.firewall.policy import (scan_input, validate_tool_call,
                                         filter_output, log_event, REFUSAL)
+from agentguard.firewall.screener import screen
 
 @trace("guarded_agent_run")
 def run_guarded_agent(user_input: str) -> str:
     ok, reason = scan_input(user_input)
     if not ok:
         log_event("input_blocked", reason, user_input)
+        return REFUSAL
+    
+    verdict = screen(user_input)
+    if verdict["verdict"] == "SUSPICIOUS":
+        log_event("llm_screener_blocked", verdict["reason"], user_input)
         return REFUSAL
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT},
