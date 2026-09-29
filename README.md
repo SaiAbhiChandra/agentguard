@@ -85,6 +85,8 @@ User message
 +-----------------------------------+
 ```
 
+Input passes through two layers: a fast regex scanner for known patterns, then an LLM-based screener that classifies paraphrased or novel attacks the regex misses. Regex runs first to keep cost low; the LLM layer only sees what regex lets through and fails open (allows the message) if the classifier call itself errors, so a screener outage never blocks real customers.
+
 Offline / CI pipeline:
 Scenario Generator ──> Target Agent ──> LLM Judge ──> Eval Report
 Red-team Attacker ──> Guarded Agent ──> ASR Report (known + held-out attacks)
