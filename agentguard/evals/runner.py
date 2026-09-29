@@ -2,7 +2,7 @@ import json, time, sys
 from pathlib import Path
 from agentguard.target_agent.agent import run_agent
 
-def run_all(agent_fn=run_agent, out="data/results.jsonl", delay=2.0):
+def run_all(agent_fn=run_agent, out="data/results.jsonl", delay=6.0):
     scenarios = json.loads(Path("data/scenarios.json").read_text(encoding="utf-8"))
     with Path(out).open("w", encoding="utf-8") as f:
         for s in scenarios:
