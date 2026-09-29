@@ -5,6 +5,8 @@ A reliability, security, and self-evaluation platform for AI agents. Wraps a tar
 **Repo:** https://github.com/SaiAbhiChandra/agentguard
 **Dashboard:** open `dashboard.html` locally (see below), or via GitHub Pages: [link]
 
+**Live demo:** https://agentguard-l6ay.onrender.com/docs (free tier — first request after idle may take ~30s)
+
 ---
 
 ## Problem
