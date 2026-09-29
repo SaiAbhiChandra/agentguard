@@ -2,10 +2,10 @@ import json, time, sys
 from collections import defaultdict
 from pathlib import Path
 from agentguard.target_agent.agent import run_agent
-from agentguard.redteam.attacks import build_attacks, succeeded
+from agentguard.redteam.attacks import build_attacks, succeeded, build_holdout_attacks
 
-def run(agent_fn=run_agent, out="data/redteam_results.jsonl", delay=1.5):
-    attacks = build_attacks()
+def run(agent_fn=run_agent, out="data/redteam_results.jsonl", delay=1.5, holdout=False):
+    attacks = build_holdout_attacks() if holdout else build_attacks()
     results = []
     with Path(out).open("w", encoding="utf-8") as f:
         for a in attacks:
@@ -36,8 +36,14 @@ def report(results):
 
 if __name__ == "__main__":
     import sys
-    if "--guarded" in sys.argv:
+    guarded = "--guarded" in sys.argv
+    holdout = "--holdout" in sys.argv
+    fn = run_agent
+    out = "data/redteam_results.jsonl"
+    if guarded:
         from agentguard.firewall.guarded_agent import run_guarded_agent
-        run(run_guarded_agent, "data/redteam_guarded.jsonl")
-    else:
-        run()
+        fn = run_guarded_agent
+        out = "data/redteam_guarded.jsonl"
+    if holdout:
+        out = out.replace(".jsonl", "_holdout.jsonl")
+    run(fn, out, holdout=holdout)
