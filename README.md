@@ -17,38 +17,76 @@ AgentGuard is that layer. It's built around one target agent (a customer-support
 
 ## Architecture
 
-                ┌────────────────────────────┐
-                User message --> │ Firewall: input scanner │
-                │ (regex injection/leak check)│
-                └─────────────┬────────────────┘
-                │ pass
-                ▼
-                ┌────────────────────────────┐
-                │ Target Agent (LLM + tool) │
-                │ system prompt + get_order_ │
-                │ status tool via LiteLLM/Groq │
-                └─────────────┬────────────────┘
-                │ tool call
-                ▼
-                ┌────────────────────────────┐
-                │ Tool-call validator │
-                │ (allow-list, numeric ID only, │
-                │ max 3 calls) │
-                └─────────────┬────────────────┘
-                │ result
-                ▼
-                ┌────────────────────────────┐
-                │ Firewall: output filter │
-                │ (system-prompt leak check, │
-                │ unexpected-ID check, length) │
-                └─────────────┬────────────────┘
-                ▼
-                Response to user
+## Architecture
 
-                Offline / CI pipeline:
-                Scenario Generator ──> Target Agent ──> LLM Judge ──> Eval Report
-                Red-team Attacker ──> Guarded Agent ──> ASR Report (known + held-out attacks)
-                GitHub Actions CI ──> runs both suites on every push, fails build on regression
+```
+User message
+     |
+     v
++-----------------------------------+
+| Firewall: Input Scanner           |
+| (regex injection/leak detection)  |
++-----------------------------------+
+     | pass                    \ blocked
+     v                          v
++-----------------------------------+      +------------------+
+| Target Agent (LLM + tool)         |      | Refusal returned |
+| system prompt + get_order_status  |      +------------------+
+| tool, via LiteLLM / Groq          |
++-----------------------------------+
+     | tool call
+     v
++-----------------------------------+
+| Tool-Call Validator               |
+| (allow-list, numeric ID only,     |
+|  max 3 calls per turn)            |
++-----------------------------------+
+     | valid                   \ blocked
+     v                          v
++-----------------------------------+      +------------------+
+| get_order_status()                |      | Refusal returned |
++-----------------------------------+      +------------------+
+     | result
+     v
+     (back to Target Agent, final answer)
+     |
+     v
++-----------------------------------+
+| Firewall: Output Filter           |
+| (leak check, unexpected-ID check, |
+|  length limit)                    |
++-----------------------------------+
+     | pass                    \ blocked
+     v                          v
++-----------------------------------+      +------------------+
+| Response to user                  |      | Refusal returned |
++-----------------------------------+      +------------------+
+```
+
+### Offline evaluation and CI pipeline
+
+```
++----------------------+     +----------------------+     +-------------+     +---------------+
+| Scenario Generator    | --> | Target / Guarded Agent| --> | LLM Judge   | --> | Eval Report   |
++----------------------+     +----------------------+     +-------------+     +---------------+
+
++----------------------+     +----------------------+     +----------------------------+
+| Red-team Attacker     | --> | Guarded Agent          | --> | ASR Report                 |
+| (known + held-out)    |     |                        |     | (known + held-out attacks) |
++----------------------+     +----------------------+     +----------------------------+
+
++-----------------------------------+
+| GitHub Actions CI                 |
+| runs on every push to main        |
+| fails build if ASR > 5%           |
+| or eval success < 85%             |
++-----------------------------------+
+```
+
+Offline / CI pipeline:
+Scenario Generator ──> Target Agent ──> LLM Judge ──> Eval Report
+Red-team Attacker ──> Guarded Agent ──> ASR Report (known + held-out attacks)
+GitHub Actions CI ──> runs both suites on every push, fails build on regression
 
 
 All tracing (every LLM call, tool call, latency, and status) is logged to `data/traces.jsonl` via a lightweight decorator-based tracer.
