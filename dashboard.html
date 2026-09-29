@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AgentGuard Dashboard</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;background:#0b0f14;color:#e6edf3}
+h1{margin-bottom:4px} .sub{color:#8b949e;margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px}
+.card h3{margin:0 0 8px;font-size:13px;color:#8b949e;text-transform:uppercase}
+.big{font-size:28px;font-weight:700}
+.good{color:#3fb950} .warn{color:#d29922} .bad{color:#f85149}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+td,th{padding:8px;border-bottom:1px solid #30363d;text-align:left;font-size:14px}
+.tag{padding:2px 8px;border-radius:6px;font-size:12px}
+</style>
+</head>
+<body>
+<h1>AgentGuard</h1>
+<p class="sub">Reliability, security and eval report for a support agent</p>
+
+<div class="grid">
+  <div class="card"><h3>Eval Success (guarded)</h3><div class="big good" id="eval">-</div></div>
+  <div class="card"><h3>Attack Success Rate (before)</h3><div class="big bad" id="asr-before">-</div></div>
+  <div class="card"><h3>Attack Success Rate (guarded)</h3><div class="big good" id="asr-after">-</div></div>
+  <div class="card"><h3>Holdout ASR (unseen attacks)</h3><div class="big good" id="asr-holdout">-</div></div>
+</div>
+
+<h2>Eval breakdown by category</h2>
+<table id="eval-table"><thead><tr><th>Category</th><th>Success</th><th>Unsafe</th><th>Hallucinations</th></tr></thead><tbody></tbody></table>
+
+<h2>Firewall interventions (sample)</h2>
+<table id="fw-table"><thead><tr><th>Kind</th><th>Reason</th></tr></thead><tbody></tbody></table>
+
+<script>
+async function load(path){ try{ const r = await fetch(path); return await r.json(); } catch(e){ return null; } }
+async function loadLines(path){ try{ const r = await fetch(path); const t = await r.text(); return t.trim().split("\n").filter(Boolean).map(JSON.parse); } catch(e){ return []; } }
+
+(async () => {
+  const scores = await load('data/scores_guarded.json') || [];
+  const baseline = await loadLines('data/redteam_baseline.jsonl');
+  const guarded = await loadLines('data/redteam_guarded.jsonl');
+  const holdout = await loadLines('data/redteam_guarded_holdout.jsonl');
+  const fwLog = await loadLines('data/firewall_log.jsonl');
+
+  const pct = (n,d) => d ? Math.round(100*n/d) : 0;
+
+  if (scores.length){
+    const ok = scores.filter(s=>s.task_success).length;
+    document.getElementById('eval').textContent = pct(ok, scores.length) + '%';
+    const cats = {};
+    scores.forEach(s => { (cats[s.category] ||= []).push(s); });
+    const body = document.querySelector('#eval-table tbody');
+    Object.entries(cats).forEach(([cat, rows]) => {
+      const ok = rows.filter(r=>r.task_success).length;
+      const unsafe = rows.filter(r=>!r.safe).length;
+      const hall = rows.filter(r=>r.hallucination).length;
+      body.innerHTML += `<tr><td>${cat}</td><td>${ok}/${rows.length} (${pct(ok,rows.length)}%)</td><td>${unsafe}</td><td>${hall}</td></tr>`;
+    });
+  }
+  if (baseline.length) document.getElementById('asr-before').textContent = pct(baseline.filter(r=>r.attack_success).length, baseline.length) + '%';
+  if (guarded.length) document.getElementById('asr-after').textContent = pct(guarded.filter(r=>r.attack_success).length, guarded.length) + '%';
+  if (holdout.length) document.getElementById('asr-holdout').textContent = pct(holdout.filter(r=>r.attack_success).length, holdout.length) + '%';
+
+  const fwBody = document.querySelector('#fw-table tbody');
+  fwLog.slice(0, 12).forEach(e => { fwBody.innerHTML += `<tr><td>${e.kind}</td><td>${e.reason}</td></tr>`; });
+})();
+</script>
+</body>
+</html>
