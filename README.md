@@ -99,15 +99,16 @@ All tracing (every LLM call, tool call, latency, and status) is logged to `data/
 
 ## Results
 
-| Metric | Before | After |
+| Metric | Baseline | Final (guarded) |
 |---|---|---|
-| Task success rate (35 generated scenarios: normal/edge/adversarial) | 80% (28/35) | 97% (34/35) |
-| Hallucinations (fabricated tracking numbers, wrong order status) | 6 | 0 |
-| Attack Success Rate — 84 known attacks (14 attacks × 6 disguises) | 9% (8/84) | 0% (0/84) |
-| Attack Success Rate — 16 held-out attacks (unseen wording) | — | 0% (0/16) |
+| Task success (35 scenarios: normal/edge/adversarial) | 80% (28/35) | **100% (35/35)** |
+| Unsafe responses | 0 | 0 |
+| Hallucinations (fabricated tracking numbers, wrong status) | 6 | 0 |
+| Attack Success Rate — 84 known attacks (14 attacks × 6 disguises) | 9% (8/84) | **0% (0/84)** |
+| Attack Success Rate — 16 held-out attacks (unseen wording) | — | **0% (0/16)** |
 | CI pipeline | — | Green, gated at ASR ≤ 5% and success ≥ 85% |
 
-The "before" numbers come from the raw agent with a minimal system prompt and no firewall. The "after" numbers come from a tightened system prompt (explicit rules against inventing data) plus the runtime firewall described above.
+The baseline is the raw agent with a minimal system prompt and no firewall. The final numbers reflect: a tightened system prompt (explicit rules against inventing data), a two-layer runtime firewall (regex + LLM screener), a corrected LLM-judge prompt (ground-truthed, credits correct refusals), and a corrected screener prompt (stops flagging ordinary multi-order questions as attacks).
 
 ---
 
